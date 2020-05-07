@@ -24,3 +24,6 @@ plug_amqp-*.tar
 
 # Elixir language server
 /.elixir_ls/
+
+# Logs
+/log/
