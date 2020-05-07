@@ -1,22 +1,23 @@
 defmodule Backoff do
-  @moduledoc false
+  @moduledoc """
+  Functions to decrease the rate of some process.
 
-  # Functions to decrease the rate of some process.
-  #
-  # A **Backoff** algorithm is commonly used to space out repeated retransmissions
-  # of the same block of data, avoiding congestion.
-  #
-  # This module provides a data structure, [Backoff](#t:t/0), that holds the state
-  # and the configuration of the backoff algorithm. Then, we can use function
-  # `step/1` to get the time to wait for repeating a process and a new state of
-  # the backoff algorithm.
-  #
-  # ## Example
-  #
-  #    #iex> backoff = Backoff.new(kind: :exp)
-  #    ##Backoff<kind: exp, min: 200, max: 15000>
-  #    #iex> {200, next_backoff} = Backoff.step(backoff)
-  #    #iex> {400, _next_backoff} = Backoff.step(next_backoff)
+  A **Backoff** algorithm is commonly used to space out repeated retransmissions
+  of the same block of data, avoiding congestion.
+
+  This module provides a data structure, [Backoff](#t:t/0), that holds the state
+  and the configuration of the backoff algorithm. Then, we can use function
+  `step/1` to get the time to wait for repeating a process and a new state of
+  the backoff algorithm.
+
+  ## Example
+
+      iex> backoff = Backoff.new(kind: :exp)
+      #Backoff<kind: exp, min: 200, max: 15000>
+      iex> {200, next_backoff} = Backoff.step(backoff)
+      iex> {400, _next_backoff} = Backoff.step(next_backoff)
+
+  """
 
   use Bitwise, only_operators: true
 
