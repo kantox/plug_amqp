@@ -25,5 +25,8 @@ plug_amqp-*.tar
 # Elixir language server
 /.elixir_ls/
 
+# Ignore PLTs folder
+/priv/plts/
+
 # Logs
 /log/

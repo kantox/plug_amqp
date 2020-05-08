@@ -12,9 +12,10 @@ defmodule PlugAmqp.MixProject do
       deps: deps(),
       description: @description,
       name: "PlugAMQP",
-      docs: docs(),
       source_url: "https://github.com/kantox/plug_amqp",
       homepage_url: "https://github.com/kantox/plug_amqp",
+      docs: docs(),
+      dialyzer: dialyzer(),
       test_coverage: test_coverage(),
       preferred_cli_env: preferred_cli_env()
     ]
@@ -29,6 +30,7 @@ defmodule PlugAmqp.MixProject do
   defp deps do
     [
       {:amqp, "~> 1.4"},
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.12", only: :dev, runtime: false},
       {:excoveralls, "~> 0.12", only: :test},
       {:mox, "~> 0.5", only: :test},
@@ -40,6 +42,12 @@ defmodule PlugAmqp.MixProject do
 
   defp docs do
     [main: "Plug.AMQP", extras: ["README.md"]]
+  end
+
+  defp dialyzer do
+    [
+      plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
+    ]
   end
 
   defp test_coverage do
