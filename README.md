@@ -23,4 +23,6 @@ You can then start the adapter with:
 Plug.AMQP, plug: MyPlug
 ```
 
-Check `Plug.AMQP` module documentation for more information.
+Check `Plug.AMQP` module from the
+[online documentation](https://kantox.hexdocs.pm/plug_amqp) for more
+information. Also, check the code under the `examples` folder.
