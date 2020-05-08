@@ -548,9 +548,9 @@ defmodule Plug.AMQP.ConsumerProducer do
   defp amqp(opts), do: Keyword.get(opts, :amqp_backend, Plug.AMQP.Backends.AMQP)
 
   @spec ack(keyword(), Channel.t(), map()) :: :ok
-  defp ack(opts, chan, %{delivery_tag: ctag}) do
-    with {:error, reason} <- amqp(opts).ack(chan, ctag) do
-      Logger.error("Error acknowledging request #{ctag}: #{inspect(reason)}")
+  defp ack(opts, chan, %{delivery_tag: tag}) do
+    with {:error, reason} <- amqp(opts).ack(chan, tag) do
+      Logger.error("Error acknowledging request #{tag}: #{inspect(reason)}")
     end
   end
 
@@ -577,20 +577,20 @@ defmodule Plug.AMQP.ConsumerProducer do
   defp close_channel(opts, chan = %Channel{}), do: amqp(opts).close_channel(chan)
 
   @spec nack_or_reject(keyword(), Channel.t(), map()) :: :ok
-  defp nack_or_reject(opts, chan, meta = %{delivery_tag: delivery_tag, redelivered: redelivered}) do
+  defp nack_or_reject(opts, chan, meta = %{delivery_tag: tag, redelivered: redelivered}) do
     if redelivered do
       id = get_request_id(meta)
       Logger.warn("Request #{id} was processed at least two times. Discarding.")
-      do_nack(opts, chan, delivery_tag, requeue: false)
+      do_nack(opts, chan, tag, requeue: false)
     else
-      do_nack(opts, chan, delivery_tag)
+      do_nack(opts, chan, tag)
     end
   end
 
   @spec do_nack(keyword(), Channel.t(), Basic.delivery_tag(), keyword()) :: :ok
-  defp do_nack(opts, chan, ctag, opts \\ []) do
-    with {:error, reason} <- amqp(opts).nack(chan, ctag, opts) do
-      Logger.error("Error non acknowledging request #{ctag}: #{inspect(reason)}")
+  defp do_nack(opts, chan, tag, nack_opts \\ []) do
+    with {:error, reason} <- amqp(opts).nack(chan, tag, nack_opts) do
+      Logger.error("Error non acknowledging request #{tag}: #{inspect(reason)}")
     end
   end
 
