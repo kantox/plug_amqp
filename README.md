@@ -1,5 +1,8 @@
 # PlugAmqp
 
+![Build and Test](https://github.com/kantox/plug_amqp/workflows/Build%20and%20Test/badge.svg)
+[![Coverage Status](https://coveralls.io/repos/github/kantox/plug_amqp/badge.svg?t=DSnX7A)](https://coveralls.io/github/kantox/plug_amqp)
+
 A Plug adapter for [AMQP](https://www.amqp.org/).
 
 ## Installation
