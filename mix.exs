@@ -15,6 +15,7 @@ defmodule PlugAmqp.MixProject do
       source_url: "https://github.com/kantox/plug_amqp",
       homepage_url: "https://github.com/kantox/plug_amqp",
       docs: docs(),
+      package: package(),
       dialyzer: dialyzer(),
       test_coverage: test_coverage(),
       preferred_cli_env: preferred_cli_env()
@@ -43,6 +44,14 @@ defmodule PlugAmqp.MixProject do
 
   defp docs do
     [main: "Plug.AMQP", extras: ["README.md"]]
+  end
+
+  defp package do
+    [
+      organization: "kantox",
+      files: ~w(lib examples mix.exs README.md .formatter.exs),
+      links: %{github: "https://github.com/kantox/plug_amqp"}
+    ]
   end
 
   defp dialyzer do
