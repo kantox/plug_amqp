@@ -1,3 +1,5 @@
+Logger.remove_backend(:console)
+
 Mox.defmock(AMQPMock, for: Plug.AMQP.Backend)
 
 ExUnit.configure(
