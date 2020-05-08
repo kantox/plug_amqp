@@ -23,7 +23,7 @@ defmodule Plug.AMQP.ConsumerProducer do
   ## Example
 
   ```elixir
-  #{File.read!("examples/consumer-producer.exs")}
+  #{File.read!("examples/consumer_producer.exs")}
   ```
   """
   use GenServer
