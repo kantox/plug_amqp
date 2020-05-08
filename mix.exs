@@ -48,7 +48,6 @@ defmodule PlugAmqp.MixProject do
 
   defp package do
     [
-      organization: "kantox",
       files: ~w(lib examples mix.exs README.md .formatter.exs),
       links: %{github: "https://github.com/kantox/plug_amqp"}
     ]
