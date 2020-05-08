@@ -95,6 +95,7 @@ defmodule Plug.AMQP.ConsumerProducer do
      at `AMQP.Basic.qos/2`. `global` option does not apply in this context.
 
   * `consumer_queue`: the name of the queue for consuming requests.
+     **Required**.
 
   * `request_handler`: the function of the type `t:request_handler/0` that will
      handle request received by the *Consumer-Producer*.
@@ -116,6 +117,8 @@ defmodule Plug.AMQP.ConsumerProducer do
   @typedoc "A list of `t:option/0`s."
   @type options() :: [option() | {atom(), any()}]
 
+  @required_options [:consumer_queue]
+
   #
   # Client
   #
@@ -123,6 +126,7 @@ defmodule Plug.AMQP.ConsumerProducer do
   @doc "Starts a new *AMQP* consumer-producer."
   @spec start_link(options()) :: GenServer.on_start()
   def start_link(opts) do
+    check_required_opts!(opts)
     GenServer.start_link(__MODULE__, opts, [])
   end
 
@@ -258,21 +262,28 @@ defmodule Plug.AMQP.ConsumerProducer do
   # A new request arrives
   def handle_info({:basic_deliver, payload, meta}, state = %State{opts: opts}) do
     Logger.debug("New request: #{inspect(payload)}, #{inspect(meta)}.")
-    request_handler = fetch_request_handler!(state)
-    headers = to_request_headers(meta)
-    {module, fun, args} = to_mfa(request_handler, [self(), payload, headers])
 
-    :telemetry.execute([:plug_amqp, :consumer_producer, :incoming_message], %{
-      size: byte_size(payload)
-    })
+    case Keyword.fetch(opts, :request_handler) do
+      {:ok, request_handler} ->
+        headers = to_request_headers(meta)
+        {module, fun, args} = to_mfa(request_handler, [self(), payload, headers])
 
-    task =
-      case Keyword.get(opts, :request_handler_supervisor) do
-        nil -> Task.async(module, fun, args)
-        supervisor -> Task.Supervisor.async_nolink(supervisor, module, fun, args)
-      end
+        :telemetry.execute([:plug_amqp, :consumer_producer, :incoming_message], %{
+          size: byte_size(payload)
+        })
 
-    {:noreply, put_index_entry(state, task, meta)}
+        task =
+          case Keyword.get(opts, :request_handler_supervisor) do
+            nil -> Task.async(module, fun, args)
+            supervisor -> Task.Supervisor.async_nolink(supervisor, module, fun, args)
+          end
+
+        {:noreply, put_index_entry(state, task, meta)}
+
+      :error ->
+        Logger.warn("No request handler configured")
+        {:noreply, state}
+    end
   end
 
   #
@@ -451,14 +462,6 @@ defmodule Plug.AMQP.ConsumerProducer do
     %{state | index: Map.delete(index, ref)}
   end
 
-  @spec fetch_request_handler!(t()) :: request_handler() | no_return()
-  defp fetch_request_handler!(%State{opts: opts}) do
-    case Keyword.fetch(opts, :request_handler) do
-      :error -> raise RuntimeError, "No request handler configured"
-      {:ok, handler} -> handler
-    end
-  end
-
   @spec new_state(options()) :: State.t()
   defp new_state(opts) do
     backoff =
@@ -592,6 +595,15 @@ defmodule Plug.AMQP.ConsumerProducer do
   #
   # Miscellaneous
   #
+
+  @spec check_required_opts!(keyword()) :: :ok | no_return()
+  defp check_required_opts!(opts) do
+    Enum.each(@required_options, fn key ->
+      if !Keyword.has_key?(opts, key) do
+        raise ArgumentError, message: "missing required #{key} option"
+      end
+    end)
+  end
 
   @spec demonitor(reference() | nil) :: boolean()
   defp demonitor(nil), do: false
