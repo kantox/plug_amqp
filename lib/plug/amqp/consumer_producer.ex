@@ -9,8 +9,7 @@ defmodule Plug.AMQP.ConsumerProducer do
 
   The response properties mirrors the properties of the request. For example,
   if a request is sent using persistence, the response will be sent using
-  persistence too (Note that persistence will disable
-  [Direct Reply-To](https://www.rabbitmq.com/direct-reply-to.html).
+  persistence too.
 
   ## Usage
 
@@ -21,6 +20,10 @@ defmodule Plug.AMQP.ConsumerProducer do
   available.
 
   ## Example
+
+  **Note** that we avoid creating a response queue here using the
+  [RabbitMQ Direct Reply-To](https://www.rabbitmq.com/direct-reply-to.html)
+  extension.
 
   ```elixir
   #{File.read!("examples/consumer_producer.exs")}
