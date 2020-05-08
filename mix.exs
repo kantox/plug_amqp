@@ -1,13 +1,20 @@
 defmodule PlugAmqp.MixProject do
   use Mix.Project
 
+  @version "0.5.0"
+  @description "A Plug adapter for AMQP"
+
   def project do
     [
       app: :plug_amqp,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.10",
-      start_permanent: Mix.env() == :prod,
       deps: deps(),
+      description: @description,
+      name: "PlugAMQP",
+      docs: docs(),
+      source_url: "https://github.com/kantox/plug_amqp",
+      homepage_url: "https://github.com/kantox/plug_amqp",
       test_coverage: test_coverage(),
       preferred_cli_env: preferred_cli_env()
     ]
@@ -29,6 +36,10 @@ defmodule PlugAmqp.MixProject do
       {:propcheck, "~> 1.2", only: :test},
       {:telemetry, "~> 0.4"}
     ]
+  end
+
+  defp docs do
+    [main: "Plug.AMQP", extras: ["README.md"]]
   end
 
   defp test_coverage do

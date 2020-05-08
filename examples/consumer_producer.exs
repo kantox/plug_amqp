@@ -3,7 +3,6 @@
 {:ok, conn} = AMQP.Connection.open()
 {:ok, chan} = AMQP.Channel.open(conn)
 
-AMQP.Queue.delete(chan, "plug_amqp.consumer_producer.requests")
 {:ok, _info} = AMQP.Queue.declare(chan, "plug_amqp.consumer_producer.requests")
 
 {:ok, _ctag} = AMQP.Basic.consume(chan, "amq.rabbitmq.reply-to", nil, no_ack: true)

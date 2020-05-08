@@ -1,21 +1,23 @@
 # PlugAmqp
 
-**TODO: Add description**
+A Plug adapter for [AMQP](https://www.amqp.org/).
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `plug_amqp` to your list of dependencies in `mix.exs`:
+You can use `plug_amqp` in your project by adding the dependency:
 
 ```elixir
 def deps do
   [
-    {:plug_amqp, "~> 0.1.0"}
+    {:plug_amqp, "~> 0.5"},
   ]
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/plug_amqp](https://hexdocs.pm/plug_amqp).
+You can then start the adapter with:
 
+```elixir
+Plug.AMQP, plug: MyPlug
+```
+
+Check `Plug.AMQP` module documentation for more information.
