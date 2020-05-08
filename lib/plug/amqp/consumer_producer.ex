@@ -340,7 +340,6 @@ defmodule Plug.AMQP.ConsumerProducer do
     {delay, next_backoff} = Backoff.step(state.backoff)
     Logger.error("Cannot open an AMQP connection: #{inspect(reason)}. Retrying in #{delay}ms.")
     Process.send_after(self(), :try_connect, delay)
-    # TODO: change :golden_gateway to plug_amqp telemetry
     :telemetry.execute([:plug_amqp, :consumer_producer, :retry], %{reason: :connection})
 
     {:noreply, %{state | backoff: next_backoff}}
