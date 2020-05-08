@@ -24,6 +24,7 @@ defmodule PlugAmqp.MixProject do
       {:amqp, "~> 1.4"},
       {:ex_doc, "~> 0.12", only: :dev, runtime: false},
       {:excoveralls, "~> 0.12", only: :test},
+      {:mox, "~> 0.5", only: :test},
       {:propcheck, "~> 1.2", only: :test},
       {:telemetry, "~> 0.4"}
     ]
