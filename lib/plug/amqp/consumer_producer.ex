@@ -304,6 +304,8 @@ defmodule Plug.AMQP.ConsumerProducer do
 
   # A request handler returns an non expected response
   def handle_info({ref, reason}, state) when is_reference(ref) do
+    demonitor(ref)
+
     {:noreply, state, {:continue, {:handle_task_error, ref, reason}}}
   end
 
