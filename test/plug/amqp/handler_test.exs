@@ -2,11 +2,11 @@ defmodule Plug.AMQPTest do
   use ExUnit.Case, async: true
 
   defmodule MyPlug do
-    def call(%Plug.Conn{path_info: ["foo", "bar"]} = conn, _) do
+    def call(conn = %Plug.Conn{path_info: ["foo", "bar"]}, _) do
       Plug.Conn.resp(conn, 200, "pong")
     end
 
-    def call(%Plug.Conn{path_info: ["force", "bar"]} = conn, _) do
+    def call(conn = %Plug.Conn{path_info: ["force", "bar"]}, _) do
       conn
       |> Plug.Conn.resp(200, "pong")
       |> Plug.Conn.send_resp()

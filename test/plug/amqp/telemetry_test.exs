@@ -1,7 +1,7 @@
 defmodule Plug.AMQP.TelemetryTest do
   use ExUnit.Case, async: true
 
-  def attach_telemetry() do
+  def attach_telemetry do
     unique_name = :"PID#{System.unique_integer()}"
     Process.register(self(), unique_name)
 

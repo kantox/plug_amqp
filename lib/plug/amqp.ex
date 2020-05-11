@@ -158,6 +158,6 @@ defmodule Plug.AMQP do
     exit({value, call})
   end
 
-  defp maybe_send_resp(%Plug.Conn{state: :set} = conn), do: Plug.Conn.send_resp(conn)
-  defp maybe_send_resp(%Plug.Conn{} = conn), do: conn
+  defp maybe_send_resp(conn = %Plug.Conn{state: :set}), do: Plug.Conn.send_resp(conn)
+  defp maybe_send_resp(conn = %Plug.Conn{}), do: conn
 end
