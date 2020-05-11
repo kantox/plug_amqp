@@ -133,7 +133,7 @@ defmodule Plug.AMQP.ConsumerProducer do
   @doc "Sends a response from a request handler"
   @spec send_resp(GenServer.server(), payload(), headers()) :: :ok
   def send_resp(server, payload, headers \\ []) do
-    GenServer.cast(server, {:send_resp, self(), payload, headers})
+    send(server, {:send_resp, self(), payload, headers})
   end
 
   #
@@ -391,7 +391,7 @@ defmodule Plug.AMQP.ConsumerProducer do
   #
 
   @impl true
-  def handle_cast(
+  def handle_info(
         {:send_resp, caller, payload, headers},
         state = %State{index: index, opts: opts}
       ) do

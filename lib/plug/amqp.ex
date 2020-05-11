@@ -83,7 +83,9 @@ defmodule Plug.AMQP do
     )
 
     try do
-      plug.call(conn, plug_opts)
+      conn
+      |> plug.call(plug_opts)
+      |> maybe_send_resp()
     catch
       kind, reason ->
         :telemetry.execute(
@@ -155,4 +157,7 @@ defmodule Plug.AMQP do
   defp exit_on_error(:exit, value, _stack, call) do
     exit({value, call})
   end
+
+  defp maybe_send_resp(%Plug.Conn{state: :set} = conn), do: Plug.Conn.send_resp(conn)
+  defp maybe_send_resp(%Plug.Conn{} = conn), do: conn
 end
