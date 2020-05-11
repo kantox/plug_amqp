@@ -31,9 +31,6 @@ defmodule Plug.AMQP.ConsumerProducer do
   """
   use GenServer
 
-  # TODO: Emit `plug_adapter.request.start`, `plug_adapter.request.stop` and
-  # `plug_adapter.request.failure` telemetry events on every request.
-
   alias AMQP.{Basic, Channel, Connection}
   alias __MODULE__, as: State
 
