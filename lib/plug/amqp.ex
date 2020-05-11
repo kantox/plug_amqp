@@ -63,12 +63,6 @@ defmodule Plug.AMQP do
     Supervisor.init([], strategy: :one_for_one)
   end
 
-  defmacrop telemetry_metas do
-    quote do
-      %{adapter: :plug_amqp, conn: var!(conn), plug: var!(plug)}
-    end
-  end
-
   @doc false
   @spec handle(
           GenServer.server(),
@@ -85,7 +79,7 @@ defmodule Plug.AMQP do
     :telemetry.execute(
       [:plug_adapter, :call, :start],
       %{system_time: System.system_time()},
-      telemetry_metas
+      %{adapter: :plug_amqp, conn: conn, plug: plug}
     )
 
     try do
@@ -95,7 +89,14 @@ defmodule Plug.AMQP do
         :telemetry.execute(
           [:plug_adapter, :call, :exception],
           %{duration: System.monotonic_time() - start},
-          %{telemetry_metas | kind: kind, reason: reason, stacktrace: __STACKTRACE__}
+          %{
+            adapter: :plug_amqp,
+            conn: conn,
+            plug: plug,
+            kind: kind,
+            reason: reason,
+            stacktrace: __STACKTRACE__
+          }
         )
 
         exit_on_error(kind, reason, __STACKTRACE__, {plug, :call, [conn, opts]})
@@ -104,7 +105,7 @@ defmodule Plug.AMQP do
         :telemetry.execute(
           [:plug_adapter, :call, :stop],
           %{duration: System.monotonic_time() - start},
-          telemetry_metas
+          %{adapter: :plug_amqp, conn: conn, plug: plug}
         )
 
         {:ok, req, {plug, opts}}
