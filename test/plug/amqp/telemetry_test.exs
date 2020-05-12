@@ -53,7 +53,7 @@ defmodule Plug.AMQP.TelemetryTest do
                       plug: MyPlug
                     }}
 
-    refute_received {:event, [:plug_adapter, :call, :exception], %{plug: MyPlug}, _}
+    refute_received {:event, [:plug_adapter, :call, :exception], _, %{plug: MyPlug}}
   end
 
   test "emits telemetry events for start/exception" do
@@ -81,6 +81,6 @@ defmodule Plug.AMQP.TelemetryTest do
                       plug: MyPlug
                     }}
 
-    refute_received {:event, [:plug_adapter, :call, :stop], %{plug: MyPlug}, _}
+    refute_received {:event, [:plug_adapter, :call, :stop], _, %{plug: MyPlug}}
   end
 end
