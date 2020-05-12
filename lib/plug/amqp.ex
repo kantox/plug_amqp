@@ -71,10 +71,47 @@ defmodule Plug.AMQP do
           options()
         ) :: :ok
   def handle(endpoint, payload, headers, opts) do
+    start = System.monotonic_time()
+
     {plug, plug_opts} = fetch_plug!(opts)
     conn = Conn.conn(endpoint, payload, headers)
 
-    plug.call(conn, plug_opts)
+    :telemetry.execute(
+      [:plug_adapter, :call, :start],
+      %{system_time: System.system_time()},
+      %{adapter: :plug_amqp, conn: conn, plug: plug}
+    )
+
+    try do
+      conn
+      |> plug.call(plug_opts)
+      |> maybe_send_resp()
+    catch
+      kind, reason ->
+        :telemetry.execute(
+          [:plug_adapter, :call, :exception],
+          %{duration: System.monotonic_time() - start},
+          %{
+            adapter: :plug_amqp,
+            conn: conn,
+            plug: plug,
+            kind: kind,
+            reason: reason,
+            stacktrace: __STACKTRACE__
+          }
+        )
+
+        exit_on_error(kind, reason, __STACKTRACE__, {plug, :call, [conn, opts]})
+    else
+      %{adapter: {Plug.AMQP.Conn, req}} = conn ->
+        :telemetry.execute(
+          [:plug_adapter, :call, :stop],
+          %{duration: System.monotonic_time() - start},
+          %{adapter: :plug_amqp, conn: conn, plug: plug}
+        )
+
+        {:ok, req, {plug, opts}}
+    end
 
     :ok
   end
@@ -98,4 +135,29 @@ defmodule Plug.AMQP do
       module -> {module, []}
     end
   end
+
+  defp exit_on_error(
+         :error,
+         %Plug.Conn.WrapperError{kind: kind, reason: reason, stack: stack},
+         _stack,
+         call
+       ) do
+    exit_on_error(kind, reason, stack, call)
+  end
+
+  defp exit_on_error(:error, value, stack, call) do
+    exception = Exception.normalize(:error, value, stack)
+    exit({{exception, stack}, call})
+  end
+
+  defp exit_on_error(:throw, value, stack, call) do
+    exit({{{:nocatch, value}, stack}, call})
+  end
+
+  defp exit_on_error(:exit, value, _stack, call) do
+    exit({value, call})
+  end
+
+  defp maybe_send_resp(conn = %Plug.Conn{state: :set}), do: Plug.Conn.send_resp(conn)
+  defp maybe_send_resp(conn = %Plug.Conn{}), do: conn
 end

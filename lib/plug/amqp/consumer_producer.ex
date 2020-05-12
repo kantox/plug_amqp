@@ -31,9 +31,6 @@ defmodule Plug.AMQP.ConsumerProducer do
   """
   use GenServer
 
-  # TODO: Emit `plug_adapter.request.start`, `plug_adapter.request.stop` and
-  # `plug_adapter.request.failure` telemetry events on every request.
-
   alias AMQP.{Basic, Channel, Connection}
   alias __MODULE__, as: State
 
@@ -136,7 +133,7 @@ defmodule Plug.AMQP.ConsumerProducer do
   @doc "Sends a response from a request handler"
   @spec send_resp(GenServer.server(), payload(), headers()) :: :ok
   def send_resp(server, payload, headers \\ []) do
-    GenServer.cast(server, {:send_resp, self(), payload, headers})
+    send(server, {:send_resp, self(), payload, headers})
   end
 
   #
@@ -293,6 +290,39 @@ defmodule Plug.AMQP.ConsumerProducer do
   # Server - Handle Info - Request Handlers
   #
 
+  # A request handler has a response sent back
+  def handle_info(
+        {:send_resp, caller, payload, headers},
+        state = %State{index: index, opts: opts}
+      ) do
+    case Enum.find(index, fn {_k, v} -> match?({%Task{pid: ^caller}, _meta}, v) end) do
+      nil ->
+        Logger.warn("Response sent from an unknown task")
+
+      {_ref, {_task, req_meta = %{reply_to: routing_key}}} ->
+        resp_meta = [
+          correlation_id: req_meta.correlation_id || req_meta.message_id,
+          headers: to_arguments(headers),
+          persistent: req_meta.persistent,
+          timestamp: DateTime.utc_now() |> DateTime.to_unix()
+        ]
+
+        case amqp(opts).publish(state.producer_chan, "", routing_key, payload, resp_meta) do
+          :ok ->
+            :telemetry.execute([:plug_amqp, :consumer_producer, :outcoming_message], %{
+              size: byte_size(payload)
+            })
+
+          {:error, reason} ->
+            id = get_request_id(req_meta)
+            Logger.error("Error sending response of message #{id}: #{inspect(reason)}.")
+            nack_or_reject(opts, state.consumer_chan, req_meta)
+        end
+    end
+
+    {:noreply, state}
+  end
+
   # A request handler finish successfully
   def handle_info({ref, :ok}, state = %State{index: index, opts: opts})
       when is_reference(ref) do
@@ -387,43 +417,6 @@ defmodule Plug.AMQP.ConsumerProducer do
     nack_or_reject(opts, state.consumer_chan, meta)
 
     {:noreply, delete_index_entry(state, ref)}
-  end
-
-  #
-  # Server - Handle Cast
-  #
-
-  @impl true
-  def handle_cast(
-        {:send_resp, caller, payload, headers},
-        state = %State{index: index, opts: opts}
-      ) do
-    case Enum.find(index, fn {_k, v} -> match?({%Task{pid: ^caller}, _meta}, v) end) do
-      nil ->
-        Logger.warn("Response sent from an unknown task")
-
-      {_ref, {_task, req_meta = %{reply_to: routing_key}}} ->
-        resp_meta = [
-          correlation_id: req_meta.correlation_id || req_meta.message_id,
-          headers: to_arguments(headers),
-          persistent: req_meta.persistent,
-          timestamp: DateTime.utc_now() |> DateTime.to_unix()
-        ]
-
-        case amqp(opts).publish(state.producer_chan, "", routing_key, payload, resp_meta) do
-          :ok ->
-            :telemetry.execute([:plug_amqp, :consumer_producer, :outcoming_message], %{
-              size: byte_size(payload)
-            })
-
-          {:error, reason} ->
-            id = get_request_id(req_meta)
-            Logger.error("Error sending response of message #{id}: #{inspect(reason)}.")
-            nack_or_reject(opts, state.consumer_chan, req_meta)
-        end
-    end
-
-    {:noreply, state}
   end
 
   #
