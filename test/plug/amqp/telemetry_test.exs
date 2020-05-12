@@ -2,25 +2,18 @@ defmodule Plug.AMQP.TelemetryTest do
   use ExUnit.Case, async: true
 
   def attach_telemetry do
-    unique_name = :"PID#{System.unique_integer()}"
-    Process.register(self(), unique_name)
+    this = self()
 
-    for suffix <- [:start, :stop, :exception] do
-      :telemetry.attach(
-        {suffix, unique_name},
-        [:plug_adapter, :call, suffix],
-        fn event, measurements, metadata, :none ->
-          send(unique_name, {:event, event, measurements, metadata})
-        end,
-        :none
-      )
-    end
+    :telemetry.attach_many(
+      this,
+      Enum.map([:start, :stop, :exception], &[:plug_adapter, :call, &1]),
+      fn event, measurements, metadata, :none ->
+        send(this, {:event, event, measurements, metadata})
+      end,
+      :none
+    )
 
-    on_exit(fn ->
-      for suffix <- [:start, :stop, :exception] do
-        :telemetry.detach({suffix, unique_name})
-      end
-    end)
+    on_exit(fn -> :telemetry.detach(this) end)
   end
 
   defmodule MyPlug do
@@ -37,8 +30,7 @@ defmodule Plug.AMQP.TelemetryTest do
   test "emits telemetry events for start/stop" do
     attach_telemetry()
 
-    Plug.AMQP
-    |> Task.async(:handle, [
+    Task.async(Plug.AMQP, :handle, [
       self(),
       "ping",
       [{"amqp-routing-key", "telemetry_stop"}],
@@ -61,14 +53,13 @@ defmodule Plug.AMQP.TelemetryTest do
                       plug: MyPlug
                     }}
 
-    refute_received {:event, [:plug_adapter, :call, :exception], _, _}
+    refute_received {:event, [:plug_adapter, :call, :exception], %{plug: MyPlug}, _}
   end
 
   test "emits telemetry events for start/exception" do
     attach_telemetry()
 
-    Plug.AMQP
-    |> Task.start(:handle, [
+    Task.start(Plug.AMQP, :handle, [
       self(),
       "ping",
       [{"amqp-routing-key", "telemetry_exception"}],
@@ -90,6 +81,6 @@ defmodule Plug.AMQP.TelemetryTest do
                       plug: MyPlug
                     }}
 
-    refute_received {:event, [:plug_adapter, :call, :stop], _, _}
+    refute_received {:event, [:plug_adapter, :call, :stop], %{plug: MyPlug}, _}
   end
 end

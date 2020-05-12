@@ -36,8 +36,7 @@ defmodule Plug.AMQPTest do
   end
 
   test "handle message that would raise but still sends a resp" do
-    Plug.AMQP
-    |> Task.start(:handle, [
+    Task.start(Plug.AMQP, :handle, [
       self(),
       "ping",
       [{"amqp-routing-key", "does.not.exist"}],
