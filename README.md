@@ -25,5 +25,5 @@ Plug.AMQP, plug: MyPlug
 ```
 
 Check `Plug.AMQP` module from the
-[online documentation](https://kantox.hexdocs.pm/plug_amqp) for more
+[online documentation](https://hexdocs.pm/plug_amqp/Plug.AMQP.html) for more
 information. Also, check the code under the `examples` folder.
