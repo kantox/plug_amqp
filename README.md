@@ -1,6 +1,7 @@
 # PlugAmqp
 
 [![Hex Version](https://img.shields.io/hexpm/v/plug_amqp.svg?maxAge=3600)](https://hex.pm/packages/plug_amqp)
+[![License](https://img.shields.io/hexpm/l/plug_amqp.svg?maxAge=3600)](https://hex.pm/packages/plug_amqp)
 [![Build and Test](https://github.com/kantox/plug_amqp/workflows/Build%20and%20Test/badge.svg)](https://github.com/kantox/plug_amqp/actions)
 [![Coverage Status](https://coveralls.io/repos/github/kantox/plug_amqp/badge.svg?t=2ISMwr)](https://coveralls.io/github/kantox/plug_amqp)
 
