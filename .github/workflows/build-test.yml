@@ -41,9 +41,9 @@ jobs:
         uses: actions/cache@v1
         with:
           path: priv/plts
-          key: plts-v${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}-${{ github.sha }}
+          key: plts-v${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}-r2-${{ github.sha }}
           restore-keys: |
-            plts-v${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}-
+            plts-v${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}-r2-
 
       - name: Get Dependencies
         if: steps.cache-deps.outputs.cache-hit != 'true'
