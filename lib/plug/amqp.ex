@@ -2,15 +2,15 @@ defmodule Plug.AMQP do
   @moduledoc """
   Adapter interface to the [AMQP RPC pattern](https://www.rabbitmq.com/tutorials/tutorial-six-elixir.html).
 
-  `Plug.AMQP` provides a [AMQP](https://www.amqp.org) interface to `Plug`.
+  `Plug.AMQP` provides an [AMQP](https://www.amqp.org) interface to `Plug`.
   When using `Plug.AMQP` you can write servers that answer requests sent through
   an *AMQP* broker, like [RabbitMQ](https://www.rabbitmq.com). The request
   response pattern is explained in detail [here](https://www.rabbitmq.com/tutorials/tutorial-six-elixir.html).
 
   ## Usage
 
-  To use `Plug.AMQP`, add it to your supervision tree by (assuming that your
-  Plug module is named `MyPlug`) :
+  To use `Plug.AMQP`, add it to your supervision tree. Assuming that your Plug
+  module is named `MyPlug`:
 
       children = [
         {Plug.AMQP, connection_options: "amqp://my-rabbit:5672", plug: MyPlug}
