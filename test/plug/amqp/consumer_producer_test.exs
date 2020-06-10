@@ -5,6 +5,7 @@ defmodule Plug.AMQP.ConsumerProducerTest do
 
   import Mox
   import Support.Trace
+  import ExUnit.CaptureLog
 
   alias Plug.AMQP.Backends.AMQP, as: Backend
   alias Plug.AMQP.ConsumerProducer
@@ -299,6 +300,29 @@ defmodule Plug.AMQP.ConsumerProducerTest do
 
       headers = [{"level", 9001}, {"amqp-routing-key", consumer_queue()}]
       assert_receive {:calling, :request_handler, ^pid, "payload", ^headers}
+      assert Process.alive?(pid)
+    end
+
+    test "" do
+      request_handler =
+        trace(:request_handler, fn server, _payload, _headers ->
+          ConsumerProducer.send_resp(server, "bar", [])
+
+          :ok
+        end)
+
+      pid = start_consumer_producer!(request_handler: request_handler, restart: :temporary)
+      send_request("", consumer_queue(), "payload")
+
+      logs =
+        capture_log(fn ->
+          send_request("", consumer_queue(), "payload")
+          assert_receive {:called, :request_handler, :ok}
+          # FIXME: find another way to check this
+          Process.sleep(1_000)
+        end)
+
+      assert logs =~ "expect no response"
       assert Process.alive?(pid)
     end
 

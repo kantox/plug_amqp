@@ -299,6 +299,10 @@ defmodule Plug.AMQP.ConsumerProducer do
       nil ->
         Logger.warn("Response sent from an unknown task")
 
+      {_ref, {_task, req_meta = %{reply_to: :undefined}}} ->
+        id = get_request_id(req_meta)
+        Logger.info("Request #{id} expect no response")
+
       {_ref, {_task, req_meta = %{reply_to: routing_key}}} ->
         resp_meta = [
           correlation_id: req_meta.correlation_id || req_meta.message_id,
