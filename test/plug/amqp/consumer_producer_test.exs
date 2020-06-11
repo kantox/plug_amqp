@@ -303,7 +303,7 @@ defmodule Plug.AMQP.ConsumerProducerTest do
       assert Process.alive?(pid)
     end
 
-    test "" do
+    test "writes a log about requests without reply-to meta" do
       request_handler =
         trace(:request_handler, fn server, _payload, _headers ->
           ConsumerProducer.send_resp(server, "bar", [])
