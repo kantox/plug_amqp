@@ -301,7 +301,7 @@ defmodule Plug.AMQP.ConsumerProducer do
 
       {_ref, {_task, req_meta = %{reply_to: :undefined}}} ->
         id = get_request_id(req_meta)
-        Logger.info("Request #{id} expect no response")
+        Logger.info("Request #{id} expects no response")
 
       {_ref, {_task, req_meta = %{reply_to: routing_key}}} ->
         resp_meta = [

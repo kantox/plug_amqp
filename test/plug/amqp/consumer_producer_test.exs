@@ -322,7 +322,7 @@ defmodule Plug.AMQP.ConsumerProducerTest do
           Process.sleep(1_000)
         end)
 
-      assert logs =~ "expect no response"
+      assert logs =~ "expects no response"
       assert Process.alive?(pid)
     end
 
