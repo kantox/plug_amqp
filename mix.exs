@@ -35,7 +35,7 @@ defmodule PlugAmqp.MixProject do
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.12", only: :dev, runtime: false},
       {:excoveralls, "~> 0.12", only: :test},
-      {:mox, "~> 0.5", only: :test},
+      {:mox, "~> 1.0", only: :test},
       {:plug, "~> 1.7"},
       {:propcheck, "~> 1.2", only: :test},
       {:telemetry, "~> 0.4"}
