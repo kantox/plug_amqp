@@ -229,7 +229,7 @@ defmodule Plug.AMQP.ConsumerTest do
     start_supervised!(consumer_producer, supervisor_options)
   end
 
-  defp create_consumer_queue() do
+  defp create_consumer_queue do
     delete_consumer_queue()
     {:ok, conn} = AMQP.Connection.open(connection_options())
     {:ok, chan} = AMQP.Channel.open(conn)
@@ -238,7 +238,7 @@ defmodule Plug.AMQP.ConsumerTest do
     AMQP.Connection.close(conn)
   end
 
-  defp delete_consumer_queue() do
+  defp delete_consumer_queue do
     {:ok, conn} = AMQP.Connection.open(connection_options())
     {:ok, chan} = AMQP.Channel.open(conn)
     AMQP.Queue.delete(chan, queue())
@@ -254,7 +254,7 @@ defmodule Plug.AMQP.ConsumerTest do
     AMQP.Connection.close(conn)
   end
 
-  def message_count() do
+  def message_count do
     {:ok, conn} = AMQP.Connection.open(connection_options())
     {:ok, chan} = AMQP.Channel.open(conn)
     result = AMQP.Queue.message_count(chan, queue())
@@ -267,15 +267,15 @@ defmodule Plug.AMQP.ConsumerTest do
   # Config
   #
 
-  defp amqp_port() do
+  defp amqp_port do
     System.get_env("AMQP_PORT", "5672") |> String.to_integer()
   end
 
-  defp connection_options() do
+  defp connection_options do
     [port: amqp_port()]
   end
 
-  defp queue() do
+  defp queue do
     System.get_env("CONSUMER_QUEUE", "plug_amqp.integration")
   end
 

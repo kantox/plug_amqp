@@ -396,8 +396,8 @@ defmodule Plug.AMQP.Consumer do
     |> to_string()
   end
 
-  @spec connection_name() :: String.t()
-  defp connection_name(), do: "#{__MODULE__}.#{:erlang.pid_to_list(self())}"
+  @spec connection_name :: String.t()
+  defp connection_name, do: "#{__MODULE__}.#{:erlang.pid_to_list(self())}"
 
   @spec close_connection(keyword(), Connection.t()) :: :ok | {:error, any()}
   defp close_connection(_opts, nil), do: :ok
