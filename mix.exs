@@ -1,7 +1,7 @@
 defmodule PlugAmqp.MixProject do
   use Mix.Project
 
-  @version "0.5.1"
+  @version "0.6.0"
   @description "A Plug adapter for AMQP"
 
   def project do
