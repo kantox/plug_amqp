@@ -30,7 +30,7 @@ defmodule PlugAmqp.MixProject do
 
   defp deps do
     [
-      {:amqp, "~> 1.4"},
+      {:amqp, "~> 2.1"},
       {:credo, "~> 1.2", only: :dev, runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.12", only: :dev, runtime: false},
