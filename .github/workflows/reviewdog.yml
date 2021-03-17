@@ -5,45 +5,11 @@ on:
     types: [opened, reopened, ready_for_review]
 
 env:
+  ELIXIR_VERSION: 1.11.2
   MIX_ENV: dev
+  OTP_VERSION: 23
 
 jobs:
-  credo:
-    name: Credo
-    runs-on: ubuntu-latest
-
-    container:
-      image: elixir:1.10.2
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Cache Dependencies
-        uses: actions/cache@v1
-        id: cache-deps
-        with:
-          path: deps
-          key: deps-${{ env.MIX_ENV }}-v${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
-          restore-keys: |
-            deps-${{ env.MIX_ENV }}-v${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}-
-
-      - name: Ensure Hex & Rebar are installed
-        run: |
-          mix local.rebar --force
-          mix local.hex --force
-
-      - name: Get Dependencies
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: mix deps.get
-
-      - name: Run Credo
-        uses: red-shirts/reviewdog-action-credo@v1
-        with:
-          github_token: ${{ secrets.github_token }}
-          info: info
-          reporter: github-pr-review
-
   misspell:
     name: Misspell
     runs-on: ubuntu-latest
@@ -58,3 +24,44 @@ jobs:
           github_token: ${{ secrets.github_token }}
           reporter: github-pr-review
 
+  credo:
+    name: Credo (Elixir)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup Elixir v${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}
+        uses: erlef/setup-elixir@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - name: Cache Dependencies
+        uses: actions/cache@v1
+        id: cache-deps
+        with:
+          path: deps
+          key: deps-${{ env.MIX_ENV }}-v${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }} # yamllint disable-line
+          restore-keys: |
+            deps-${{ env.MIX_ENV }}-v${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}-
+
+      - name: Install Reviewdog
+        uses: reviewdog/action-setup@v1
+
+      - name: Install Hex and Rebar
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+
+      - name: Get Dependencies
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: mix deps.get --only $MIX_ENV
+
+      - name: Run Credo
+        run: |
+          mix credo suggest --strict --format=flycheck \
+          | reviewdog -efm="%f:%l:%c: %t: %m" -efm="%f:%l: %t: %m" \
+              -name="credo" -reporter=github-pr-review -level=info
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
