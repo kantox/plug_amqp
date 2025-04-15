@@ -4,7 +4,7 @@ defmodule PlugAmqp.MixProject do
   def project do
     [
       app: :plug_amqp,
-      version: "2.0.2",
+      version: "2.0.3",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
       deps_path: "../../deps",
