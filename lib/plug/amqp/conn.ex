@@ -1,81 +1,64 @@
 defmodule Plug.AMQP.Conn do
   @moduledoc """
-  Adapter for AMQP to Plug.Conn
-
-  This adapter partially implements the Plug.Conn.Adapter behaviour, with the
-  following caveats:
-
-  * `c:Plug.Conn.Adapter.send_file/6`, `c:Plug.Conn.Adapter.send_chunked/3` and
-    `c:Plug.Conn.Adapter.chunk/2` raise, because there is no such functionality
-    in *AMQP*. Also `c:Plug.Conn.Adapter.push/3` and
-    `c:Plug.Conn.Adapter.inform/3` are not supported.
-
-  * `c:Plug.Conn.Adapter.read_req_body/2` ignores the options and always returns
-    the whole message body.
-
-  * `request_path` is taken from the *routing_key*, by replacing dots with
-    slashes and prepending a slash. This will play nice with existing plugs
-    that expect url-like paths.
-
-  * `method` is `"POST"` by default. You can override this behaviour setting a
-    custom method in the `x-method-override` header.
+  TODO
   """
 
   @behaviour Plug.Conn.Adapter
 
-  @routing_key_header "amqp-routing-key"
-  @method_override_header "x-method-override"
+  alias AMQPHelpers.Reliability.Producer
+  alias Plug.AMQP.UnsupportedError
 
-  alias Plug.AMQP.{ConsumerProducer, UnsupportedError}
+  @spec conn(pid(), binary(), map()) :: struct()
+  def conn(producer, payload, meta) do
+    headers =
+      if is_list(meta.headers) do
+        Enum.map(meta.headers, fn {key, _type, value} ->
+          {String.downcase(key), to_string(value)}
+        end)
+      else
+        []
+      end
 
-  @spec conn(GenServer.server(), ConsumerProducer.payload(), ConsumerProducer.headers()) ::
-          Plug.Conn.t()
-  def conn(consumer_producer, payload, headers) do
-    headers = Enum.map(headers, fn {k, v} -> {normalize_header_name(k), to_string(v)} end)
+    host = get_amqp_header(headers, "x-plug-amqp-req-host", meta.consumer_tag)
+    method = get_amqp_header(headers, "x-plug-amqp-req-method", "POST")
+    query_string = get_amqp_header(headers, "x-plug-amqp-req-query", "")
 
-    {_, routing_key} = Enum.find(headers, {nil, ""}, &match?({@routing_key_header, _}, &1))
-    {_, method} = Enum.find(headers, {nil, "POST"}, &match?({@method_override_header, _}, &1))
+    req_headers =
+      headers
+      |> Stream.reject(&match?({"x-plug-amqp-req-host", _type, _value}, &1))
+      |> Stream.reject(&match?({"x-plug-amqp-req-method", _type, _value}, &1))
+      |> Stream.reject(&match?({"x-plug-amqp-req-query", _type, _value}, &1))
+      |> Stream.concat(
+        case meta.content_encoding do
+          :undefined ->
+            []
 
-    # Renormalize some common headers that are used by usual plugs.
-    common_headers =
-      Enum.flat_map(headers, fn
-        {"amqp-content-encoding", v} -> [{"content-encoding", v}]
-        # Compatibility with Plug.Parsers
-        {"amqp-content-type", v} -> [{"content-type", v}]
-        # Compatibility with Plug.RequestId
-        {"amqp-message-id", v} -> [{"x-request-id", v}]
-        _ -> []
-      end)
+          content_encoding ->
+            [{"content-encoding", content_encoding}]
+        end
+      )
+      |> Stream.concat(
+        case meta.content_type do
+          :undefined ->
+            []
+
+          content_type ->
+            [{"content-type", content_type}]
+        end
+      )
+      |> Enum.concat([{"content-length", "#{byte_size(payload)}"}])
 
     %Plug.Conn{
-      adapter: {__MODULE__, {consumer_producer, payload}},
-      method: String.upcase(method),
+      adapter: {__MODULE__, {producer, payload, meta}},
+      host: host,
+      method: method,
       owner: self(),
-      path_info: :binary.split(routing_key, ".", [:global, :trim_all]),
+      path_info: :binary.split(meta.routing_key, ".", [:global, :trim_all]),
+      query_string: query_string,
       remote_ip: {0, 0, 0, 0},
-      req_headers: common_headers ++ headers,
-      request_path: "/" <> :binary.replace(routing_key, ".", "/", [:global])
+      req_headers: req_headers,
+      request_path: "/" <> :binary.replace(meta.routing_key, ".", "/", [:global])
     }
-  end
-
-  defp normalize_header_name(name) do
-    name |> to_string() |> String.downcase() |> String.replace(~r|[^a-zA-Z0-9]+|, "-")
-  end
-
-  @impl true
-  def send_resp(req = {consumer_producer, _req_payload}, _status, headers, body) do
-    ConsumerProducer.send_resp(consumer_producer, body, headers)
-    {:ok, body, req}
-  end
-
-  @impl true
-  def send_file(_req, _status, _headers, _path, _offset, _length) do
-    raise UnsupportedError
-  end
-
-  @impl true
-  def send_chunked(_req, _status, _headers) do
-    raise UnsupportedError
   end
 
   @impl true
@@ -84,8 +67,14 @@ defmodule Plug.AMQP.Conn do
   end
 
   @impl true
-  def read_req_body(req = {_endpoint, payload}, _opts) do
-    {:ok, payload, req}
+  def get_http_protocol(_req) do
+    :"AMQP-0-9-1"
+  end
+
+  @impl true
+  def get_peer_data(_conn) do
+    # TODO: Maybe return the IP of the broker? IP/ID of the caller?
+    %{address: {0, 0, 0, 0}, port: 0, ssl_cert: nil}
   end
 
   @impl true
@@ -99,12 +88,116 @@ defmodule Plug.AMQP.Conn do
   end
 
   @impl true
-  def get_peer_data(_conn) do
-    %{address: {0, 0, 0, 0}, port: 0, ssl_cert: nil}
+  def read_req_body(req = {_producer, payload, _meta}, _opts) do
+    {:ok, payload, req}
   end
 
   @impl true
-  def get_http_protocol(_req) do
-    :"AMQP-0-9-1"
+  def send_chunked(_req, _status, _headers) do
+    raise UnsupportedError
+  end
+
+  @impl true
+  def send_file(_req, _status, _headers, _path, _offset, _length) do
+    raise UnsupportedError
+  end
+
+  @impl true
+  def send_resp(req = {_producer, _payload, %{reply_to: :undefined}}, _status, _headers, _body) do
+    {:ok, nil, req}
+  end
+
+  # TODO: Add mandatory as an optional header
+  # TODO: Add immediate as an optional header
+  # TODO: Add priority as an optional header
+  # TODO: Add reply_to as an optional header
+  # TODO: Add expiration as an optional header
+  # TODO: Add user_id as an optional header
+  # TODO: Add app_id as an optional header
+  def send_resp(req = {producer, _payload, meta}, status, headers, body) do
+    content_type = get_plug_header(headers, "content-type")
+
+    content_encoding = get_plug_header(headers, "content-encoding")
+
+    message_headers =
+      headers
+      |> Stream.reject(&match?({"content-type", _value}, &1))
+      |> Stream.reject(&match?({"content-encoding", _value}, &1))
+      |> Stream.reject(&match?({"x-plug-amqp-resp-persistent", _value}, &1))
+      |> Stream.reject(&match?({"x-plug-amqp-resp-message-id", _value}, &1))
+      |> Stream.reject(&match?({"x-plug-amqp-resp-timestamp", _value}, &1))
+      |> Stream.reject(&match?({"x-plug-amqp-resp-type", _value}, &1))
+      |> Enum.map(fn {key, value} -> {key, :binary, value} end)
+      |> then(&[{"x-plug-amqp-http-status", :long, status} | &1])
+
+    persistent =
+      case get_plug_header(headers, "x-plug-amqp-resp-persistent") do
+        :undefined -> true
+        "true" -> true
+        "false" -> false
+      end
+
+    message_id = get_plug_header(headers, "x-plug-amqp-resp-message-id", Uniq.UUID.uuid7())
+
+    timestamp =
+      case get_plug_header(headers, "x-plug-amqp-resp-timestamp") do
+        :undefined -> System.os_time(:second)
+        timestamp_string -> String.to_integer(timestamp_string)
+      end
+
+    type = get_plug_header(headers, "x-plug-amqp-resp-type")
+
+    # TODO
+    publish_opts = [
+      content_type: content_type,
+      content_encoding: content_encoding,
+      headers: message_headers,
+      persistent: persistent,
+      correlation_id: get_response_correlation_id(meta),
+      message_id: message_id,
+      timestamp: timestamp,
+      type: type
+    ]
+
+    body = if is_list(body), do: IO.iodata_to_binary(body), else: body
+
+    :ok = Producer.publish(producer, "", meta.reply_to, body, publish_opts)
+
+    {:ok, nil, req}
+  end
+
+  @impl true
+  def upgrade(_payload, _protocol, _opts) do
+    {:error, :not_supported}
+  end
+
+  @spec get_amqp_header([{String.t(), String.t()}], String.t(), term()) :: term()
+  defp get_amqp_header(headers, key, default) do
+    case Enum.find(headers, &match?({^key, _value}, &1)) do
+      {^key, _type, value} -> value
+      _other -> default
+    end
+  end
+
+  @spec get_response_correlation_id(map()) :: term()
+  defp get_response_correlation_id(%{correlation_id: correlation_id})
+       when correlation_id != :undefined do
+    correlation_id
+  end
+
+  defp get_response_correlation_id(%{correlation_id: :undefined, message_id: message_id})
+       when message_id != :undefined do
+    message_id
+  end
+
+  defp get_response_correlation_id(_meta), do: :undefined
+
+  @spec get_plug_header([{binary(), binary()}], binary(), binary() | :undefined) ::
+          binary() | :undefined
+  defp get_plug_header(headers, key, default \\ :undefined) do
+    case Enum.find(headers, &match?({^key, _value}, &1)) do
+      {^key, value} -> value
+      _other -> default
+    end
   end
 end
