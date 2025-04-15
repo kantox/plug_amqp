@@ -1,78 +1,49 @@
 defmodule PlugAmqp.MixProject do
   use Mix.Project
 
-  @version "0.6.0"
-  @description "A Plug adapter for AMQP"
+  @source_url "https://github.com/kantox/plug_amqp"
+  @version "2.0.3"
+  @description "A Plug adapter for Cowboy"
 
   def project do
     [
       app: :plug_amqp,
       version: @version,
-      elixir: "~> 1.10",
+      elixir: "~> 1.12",
       deps: deps(),
-      description: @description,
-      name: "PlugAMQP",
-      source_url: "https://github.com/kantox/plug_amqp",
-      homepage_url: "https://github.com/kantox/plug_amqp",
-      docs: docs(),
       package: package(),
-      dialyzer: dialyzer(),
-      test_coverage: test_coverage(),
-      preferred_cli_env: preferred_cli_env()
+      description: @description,
+      name: "Plug.AMQP",
+      docs: docs()
     ]
   end
 
   def application do
-    [
-      extra_applications: [:logger]
-    ]
+    [extra_applications: [:logger]]
   end
 
   defp deps do
     [
-      {:amqp, "~> 1.4"},
-      {:credo, "~> 1.2", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.12", only: :dev, runtime: false},
-      {:excoveralls, "~> 0.12", only: :test},
-      {:mox, "~> 1.0", only: :test},
-      {:plug, "~> 1.7"},
-      {:propcheck, "~> 1.2", only: :test},
-      {:telemetry, "~> 0.4"}
+      {:amqp, "~> 3.0"},
+      {:amqp_helpers, "~> 1.3"},
+      {:ex_doc, "~> 0.37", only: :dev, runtime: false},
+      {:plug, "~> 1.12"},
+      {:uniq, "~> 0.6"}
     ]
-  end
-
-  defp docs do
-    [main: "Plug.AMQP", extras: ["README.md"]]
   end
 
   defp package do
     [
-      files: ~w(lib examples mix.exs README.md .formatter.exs),
       licenses: ["MIT"],
-      links: %{github: "https://github.com/kantox/plug_amqp"}
+      links: %{"GitHub" => @source_url}
     ]
   end
 
-  defp dialyzer do
+  defp docs do
     [
-      plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
-    ]
-  end
-
-  defp test_coverage do
-    [
-      tool: ExCoveralls
-    ]
-  end
-
-  defp preferred_cli_env do
-    [
-      coveralls: :test,
-      "coveralls.detail": :test,
-      "coveralls.github": :test,
-      "coveralls.html": :test,
-      "coveralls.post": :test
+      main: "Plug.AMQP",
+      source_ref: "v#{@version}",
+      source_url: @source_url
     ]
   end
 end
