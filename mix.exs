@@ -1,18 +1,20 @@
 defmodule PlugAmqp.MixProject do
   use Mix.Project
 
+  @source_url "https://github.com/kantox/plug_amqp"
+  @version "2.0.3"
+  @description "A Plug adapter for Cowboy"
+
   def project do
     [
       app: :plug_amqp,
-      version: "2.0.3",
-      build_path: "../../_build",
-      config_path: "../../config/config.exs",
-      deps_path: "../../deps",
-      lockfile: "../../mix.lock",
+      version: @version,
       elixir: "~> 1.12",
-      start_permanent: Mix.env() == :prod,
       deps: deps(),
-      aliases: aliases()
+      package: package(),
+      description: @description,
+      name: "Plug.AMQP",
+      docs: docs()
     ]
   end
 
@@ -24,15 +26,24 @@ defmodule PlugAmqp.MixProject do
     [
       {:amqp, "~> 3.0"},
       {:amqp_helpers, "~> 1.3"},
+      {:ex_doc, "~> 0.37", only: :dev, runtime: false},
       {:plug, "~> 1.12"},
       {:uniq, "~> 0.6"}
     ]
   end
 
-  defp aliases do
+  defp package do
     [
-      reset: [],
-      setup: "deps.get"
+      licenses: ["MIT"],
+      links: %{"GitHub" => @source_url}
+    ]
+  end
+
+  defp docs do
+    [
+      main: "Plug.AMQP",
+      source_ref: "v#{@version}",
+      source_url: @source_url
     ]
   end
 end
