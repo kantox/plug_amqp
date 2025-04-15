@@ -1,132 +1,114 @@
-defmodule Plug.AMQP do
+defmodule Plug.Amqp do
   @moduledoc """
-  Adapter interface to the [AMQP RPC pattern](https://www.rabbitmq.com/tutorials/tutorial-six-elixir.html).
-
-  `Plug.AMQP` provides an [AMQP](https://www.amqp.org) interface to `Plug`.
-  When using `Plug.AMQP` you can write servers that answer requests sent through
-  an *AMQP* broker, like [RabbitMQ](https://www.rabbitmq.com). The request
-  response pattern is explained in detail [here](https://www.rabbitmq.com/tutorials/tutorial-six-elixir.html).
-
-  ## Usage
-
-  To use `Plug.AMQP`, add it to your supervision tree. Assuming that your Plug
-  module is named `MyPlug`:
-
-      children = [
-        {Plug.AMQP, connection_options: "amqp://my-rabbit:5672", plug: MyPlug}
-      ]
-
-      Supervisor.start_link(children, strategy: :one_for_one)
-
-  Check `t:option/0` and `t:Plug.AMQP.ConsumerProducer.option/0` for more
-  options.
-
-  ## Examples
-
-  The following example is taken from the
-  [RabbitMQ RPC Tutorial](https://www.rabbitmq.com/tutorials/tutorial-six-elixir.html)
-  but using `Plug.AMQP`.
-
-  ```elixir
-  #{File.read!("examples/fibonacci.exs")}
-  ```
-
+  TODO
   """
+
   use Supervisor
 
-  alias Plug.AMQP.{Conn, ConsumerProducer}
+  require Logger
 
-  @typedoc """
-  A `Plug.AMQP` configuration option.
+  alias AMQPHelpers.Reliability.{Consumer, Producer}
+  alias Plug.AMQP.Conn
 
-  `Plug.AMQP` supports any of `t:Plug.AMQP.ConsumerProducer.option/0`. Also, the `plug`
-  option must be used to set the main plug of a server.
-  """
-  @type option() ::
-          {:plug, module() | {module() | keyword()}}
-          | ConsumerProducer.option()
+  @supervisor_options ~w(strategy max_restarts max_seconds name)a
 
-  @typedoc "A list of `t:option/0`s."
-  @type options() :: [option() | {atom(), any()}]
+  # TODO: Add support to url option, like "amqp://my_broker:5672".
 
-  @doc false
-  @spec start_link(keyword) :: Supervisor.on_start()
-  def start_link(opts) do
-    with {:ok, supervisor} <- Supervisor.start_link(__MODULE__, opts, []),
-         :ok <- start_children(supervisor, opts) do
-      {:ok, supervisor}
-    end
+  @typedoc "TODO"
+  @type option ::
+          Supervisor.option()
+          | Supervisor.init_option()
+          | {:consumer_options, Consumer.options()}
+          | {:plug, module() | {module() | keyword()}}
+          | {:producer_options, Consumer.options()}
+
+  @typedoc "TODO"
+  @type options :: [option()]
+
+  @spec start_link(options()) :: Supervisor.on_start()
+  def start_link(options \\ []) do
+    {supervisor_opts, plug_amqp_opts} = Keyword.split(options, @supervisor_options)
+
+    Supervisor.start_link(__MODULE__, plug_amqp_opts, supervisor_opts)
   end
 
   @impl true
-  def init(_opts) do
-    Supervisor.init([], strategy: :one_for_one)
+  def init(opts) do
+    supervisor = self()
+
+    consumer_opts =
+      opts
+      |> Keyword.fetch!(:consumer_options)
+      |> Keyword.put(:message_handler, &handle_message(supervisor, &1, &2, opts))
+      |> Keyword.put(:requeue, get_in(opts, [:consumer_options, :requeue]))
+      |> Keyword.put(:task_supervisor, {:via, __MODULE__, {supervisor, Task.Supervisor}})
+
+    producer_opts = Keyword.fetch!(opts, :producer_options)
+
+    children = [
+      {Consumer, consumer_opts},
+      {Producer, producer_opts},
+      Task.Supervisor
+    ]
+
+    Supervisor.init(children, strategy: :one_for_one)
   end
 
+  #
+  # Name Registry Implementation
+  #
+
   @doc false
-  @spec handle(
-          GenServer.server(),
-          ConsumerProducer.payload(),
-          ConsumerProducer.headers(),
-          options()
-        ) :: :ok
-  def handle(endpoint, payload, headers, opts) do
-    start = System.monotonic_time()
+  def register_name(_name, _pid), do: :yes
+
+  @doc false
+  def unregister_name(name), do: name
+
+  @doc false
+  def whereis_name({supervisor, module}), do: whereis_name(supervisor, module)
+
+  @doc false
+  def whereis_name(supervisor, module) do
+    supervisor
+    |> Supervisor.which_children()
+    |> Enum.find(&match?({^module, _pid, _kind, _modules}, &1))
+    |> elem(1)
+  end
+
+  #
+  # Message Handling Implementation
+  #
+
+  # TODO: Add more options to customize the nack of the messages.
+
+  @spec handle_message(pid(), binary(), map(), options()) :: :ok | {:error, term()}
+  defp handle_message(supervisor, payload, meta, opts) do
+    producer = whereis_name(supervisor, Producer)
 
     {plug, plug_opts} = fetch_plug!(opts)
-    conn = Conn.conn(endpoint, payload, headers)
-
-    :telemetry.execute(
-      [:plug_adapter, :call, :start],
-      %{system_time: System.system_time()},
-      %{adapter: :plug_amqp, conn: conn, plug: plug}
-    )
+    conn = Conn.conn(producer, payload, meta)
 
     try do
       conn
       |> plug.call(plug_opts)
-      |> maybe_send_resp()
+      |> send_resp()
     catch
-      kind, reason ->
-        :telemetry.execute(
-          [:plug_adapter, :call, :exception],
-          %{duration: System.monotonic_time() - start},
-          %{
-            adapter: :plug_amqp,
-            conn: conn,
-            plug: plug,
-            kind: kind,
-            reason: reason,
-            stacktrace: __STACKTRACE__
-          }
+      _kind, reason ->
+        Logger.error("Cannot handle message from Plug.AMQP",
+          reason: reason,
+          stacktace: __STACKTRACE__
         )
 
-        exit_on_error(kind, reason, __STACKTRACE__, {plug, :call, [conn, opts]})
+        {:error, reason}
     else
-      %{adapter: {Plug.AMQP.Conn, req}} = conn ->
-        :telemetry.execute(
-          [:plug_adapter, :call, :stop],
-          %{duration: System.monotonic_time() - start},
-          %{adapter: :plug_amqp, conn: conn, plug: plug}
-        )
-
-        {:ok, req, {plug, opts}}
-    end
-
-    :ok
-  end
-
-  @spec start_children(Supervisor.supervisor(), keyword()) :: :ok | {:error, any()}
-  defp start_children(supervisor, opts) do
-    with {:ok, task_supervisor} <- Supervisor.start_child(supervisor, Task.Supervisor),
-         opts <-
-           opts
-           |> Keyword.put_new(:request_handler_supervisor, task_supervisor)
-           |> Keyword.put(:request_handler, {__MODULE__, :handle, opts}),
-         {:ok, _endpoint} <- Supervisor.start_child(supervisor, {ConsumerProducer, opts}) do
-      :ok
+      _conn ->
+        :ok
     end
   end
+
+  #
+  # Misc
+  #
 
   @spec fetch_plug!(options()) :: {module(), keyword()} | no_return()
   defp fetch_plug!(opts) do
@@ -136,28 +118,6 @@ defmodule Plug.AMQP do
     end
   end
 
-  defp exit_on_error(
-         :error,
-         %Plug.Conn.WrapperError{kind: kind, reason: reason, stack: stack},
-         _stack,
-         call
-       ) do
-    exit_on_error(kind, reason, stack, call)
-  end
-
-  defp exit_on_error(:error, value, stack, call) do
-    exception = Exception.normalize(:error, value, stack)
-    exit({{exception, stack}, call})
-  end
-
-  defp exit_on_error(:throw, value, stack, call) do
-    exit({{{:nocatch, value}, stack}, call})
-  end
-
-  defp exit_on_error(:exit, value, _stack, call) do
-    exit({value, call})
-  end
-
-  defp maybe_send_resp(conn = %Plug.Conn{state: :set}), do: Plug.Conn.send_resp(conn)
-  defp maybe_send_resp(conn = %Plug.Conn{}), do: conn
+  defp send_resp(conn = %Plug.Conn{state: :set}), do: Plug.Conn.send_resp(conn)
+  defp send_resp(conn = %Plug.Conn{}), do: conn
 end
