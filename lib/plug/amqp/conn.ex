@@ -25,9 +25,9 @@ defmodule Plug.AMQP.Conn do
 
     req_headers =
       headers
-      |> Stream.reject(&match?({"x-plug-amqp-req-host", _type, _value}, &1))
-      |> Stream.reject(&match?({"x-plug-amqp-req-method", _type, _value}, &1))
-      |> Stream.reject(&match?({"x-plug-amqp-req-query", _type, _value}, &1))
+      |> Stream.reject(&match?({"x-plug-amqp-req-host", _value}, &1))
+      |> Stream.reject(&match?({"x-plug-amqp-req-method", _value}, &1))
+      |> Stream.reject(&match?({"x-plug-amqp-req-query", _value}, &1))
       |> Stream.concat(
         case meta.content_encoding do
           :undefined ->
@@ -174,7 +174,7 @@ defmodule Plug.AMQP.Conn do
   @spec get_amqp_header([{String.t(), String.t()}], String.t(), term()) :: term()
   defp get_amqp_header(headers, key, default) do
     case Enum.find(headers, &match?({^key, _value}, &1)) do
-      {^key, _type, value} -> value
+      {^key, value} -> value
       _other -> default
     end
   end
