@@ -2,7 +2,7 @@ defmodule PlugAmqp.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/kantox/plug_amqp"
-  @version "2.0.4"
+  @version "2.1.0"
   @description "A Plug adapter for Cowboy"
 
   def project do
@@ -11,6 +11,7 @@ defmodule PlugAmqp.MixProject do
       version: @version,
       elixir: "~> 1.12",
       deps: deps(),
+      test_coverage: [tool: ExCoveralls],
       package: package(),
       description: @description,
       name: "Plug.AMQP",
@@ -26,6 +27,8 @@ defmodule PlugAmqp.MixProject do
     [
       {:amqp, "~> 3.0"},
       {:amqp_helpers, "~> 1.3"},
+      {:dialyxir, "~> 1.4", only: [:dev, :test]},
+      {:excoveralls, "~> 0.18.5", only: :test},
       {:ex_doc, "~> 0.37", only: :dev, runtime: false},
       {:plug, "~> 1.12"},
       {:uniq, "~> 0.6"}
