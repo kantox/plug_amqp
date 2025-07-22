@@ -47,7 +47,15 @@ defmodule Plug.AMQP.Conn do
         end
       )
       |> Stream.concat([{"content-length", "#{byte_size(payload)}"}])
-      |> Enum.concat([{"x-request-id", meta.message_id}])
+      |> Enum.concat(
+        case meta.message_id do
+          :undefined ->
+            []
+
+          message_id ->
+            [{"x-request-id", message_id}]
+        end
+      )
 
     %Plug.Conn{
       adapter: {__MODULE__, {producer, payload, meta}},
