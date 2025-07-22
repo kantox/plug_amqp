@@ -2,7 +2,7 @@ defmodule PlugAmqp.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/kantox/plug_amqp"
-  @version "2.1.0"
+  @version "2.1.1"
   @description "A Plug adapter for Cowboy"
 
   def project do
