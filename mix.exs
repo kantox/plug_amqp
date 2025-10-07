@@ -25,12 +25,12 @@ defmodule PlugAmqp.MixProject do
 
   defp deps do
     [
-      {:amqp, "~> 4.0"},
+      {:amqp, "~> 4.1"},
       {:amqp_helpers, "~> 1.6"},
       {:dialyxir, "~> 1.4", only: [:dev, :test]},
       {:excoveralls, "~> 0.18.5", only: :test},
       {:ex_doc, "~> 0.37", only: :dev, runtime: false},
-      {:plug, "~> 1.12"},
+      {:plug, "~> 1.18"},
       {:uniq, "~> 0.6"}
     ]
   end
